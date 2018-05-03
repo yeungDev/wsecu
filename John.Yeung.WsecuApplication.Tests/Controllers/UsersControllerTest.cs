@@ -10,6 +10,7 @@ using John.Yeung.WsecuApplication.Controllers;
 using John.Yeung.WsecuApplication.Models;
 using Moq;
 using System.Data.Entity;
+using System.ComponentModel.DataAnnotations;
 
 namespace John.Yeung.WsecuApplication.Tests.Controllers
 {
@@ -114,6 +115,29 @@ namespace John.Yeung.WsecuApplication.Tests.Controllers
         }
 
         [TestMethod]
+        public void PostDuplicate()
+        {
+            var context = LoadContext();
+
+            var countBefore = context.Users.Count();
+
+            UsersController controller = new UsersController(context);
+            var user = new User
+            {
+                Email = "email1@test.com",
+                UserName = "Person1",
+                Name = "Some Person"
+            };
+
+            controller.Post(user);
+
+            var countAfter = context.Users.Count();
+
+            // Since the email already exists, the count before and after should be the same.
+            Assert.AreEqual(countBefore, countAfter);
+        }
+
+        [TestMethod]
         public void Put()
         {
             var context = LoadContext();
@@ -132,7 +156,7 @@ namespace John.Yeung.WsecuApplication.Tests.Controllers
 
             var originalUser = controller.Get(user.UserName);
 
-            controller.Put(user.UserName, user);
+            controller.Put(1, user);
 
             var updatedUser = controller.Get(user.UserName);
 
@@ -147,7 +171,7 @@ namespace John.Yeung.WsecuApplication.Tests.Controllers
 
             UsersController controller = new UsersController(context);
 
-            controller.Delete("Person1");
+            controller.Delete(1);
 
             var deleted = controller.Get("Person1");
 
@@ -162,8 +186,13 @@ namespace John.Yeung.WsecuApplication.Tests.Controllers
             var invalidUser = new User();
             var validUser = new User { Email = "test@email.com", Name = "TestName", UserName = "TestUserName" };
 
-            Assert.IsFalse(controller.IsUserValid(invalidUser));
-            Assert.IsTrue(controller.IsUserValid(validUser));
+            var errors = new List<ValidationResult>();
+
+            var hasErrors = Validator.TryValidateObject(invalidUser, new ValidationContext(invalidUser), errors);
+            var noErrors = Validator.TryValidateObject(validUser, new ValidationContext(validUser), errors);
+
+            Assert.IsFalse(hasErrors);
+            Assert.IsTrue(noErrors);
         }
 
         [TestMethod]

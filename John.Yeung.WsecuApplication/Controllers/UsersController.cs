@@ -32,47 +32,71 @@ namespace John.Yeung.WsecuApplication.Controllers
             base.Dispose(disposing);
         }
 
+        [HttpGet]
+        [Route("api/Users")]
         public IEnumerable<User> Get()
         {
             return context.Users.ToList();
         }
 
-        public User Get(string id)
+        [HttpGet]
+        [Route("api/Users/{userName}")]
+        public User Get(string userName)
         {
-            return context.Users.FirstOrDefault(m => m.UserName.ToLower() == id.ToLower());
+            return context.Users.FirstOrDefault(m => m.UserName.ToLower() == userName.ToLower());
         }
 
-        public void Post([FromBody]User user)
+        [HttpPost]
+        [Route("api/Users")]
+        public IHttpActionResult Post([FromBody]User user)
         {
-            if (IsUserValid(user) && !IsUserNameUsed(user.UserName))
+            if (ModelState.IsValid && !IsUserNameUsed(user.UserName))
             {
                 context.Users.Add(user);
 
                 context.SaveChanges();
 
+                return Ok();
             }
+
+            return BadRequest();
         }
 
-        public void Put(string id, [FromBody]User user)
+        [HttpPut]
+        [Route("api/Users/{id}")]
+        public IHttpActionResult Put(int id, [FromBody]User user)
         {
-            if (IsUserValid(user))
+            if (ModelState.IsValid)
             {
-                var userToUpdate = Get(id);
+                var userToUpdate = context.Users.FirstOrDefault(m => m.UserId == id);
 
-                userToUpdate.Email = user.Email;
-                userToUpdate.Name = user.Name;
+                if (userToUpdate != null)
+                {
+                    userToUpdate.Email = user.Email;
+                    userToUpdate.Name = user.Name;
 
+                    context.SaveChanges();
+                }
+
+                return Ok();
+            }
+
+            return BadRequest("");
+        }
+
+        [HttpDelete]
+        [Route("api/Users/{id}")]
+        public IHttpActionResult Delete(int id)
+        {
+            var userToRemove = context.Users.FirstOrDefault(m => m.UserId == id);
+
+            if (userToRemove != null)
+            {
+                context.Users.Remove(userToRemove);
                 context.SaveChanges();
             }
-        }
 
-        public void Delete(string id)
-        {
-            var userToRemove = context.Users.FirstOrDefault(m => m.UserName.ToLower() == id.ToLower());
-
-            context.Users.Remove(userToRemove);
-            context.SaveChanges();
-
+            return Ok();
         }
 
         internal bool IsUserNameUsed(string userName)
@@ -80,17 +104,6 @@ namespace John.Yeung.WsecuApplication.Controllers
             if (string.IsNullOrWhiteSpace(userName)) return false;
 
             return context.Users.Any(m => m.UserName.ToLower() == userName.ToLower());
-        }
-
-        internal bool IsUserValid(User user)
-        {
-            // Should also validate email format, username format, but for simplicity's sake..
-
-            if (string.IsNullOrWhiteSpace(user.Name)) return false;
-            if (string.IsNullOrWhiteSpace(user.Email)) return false;
-            if (string.IsNullOrWhiteSpace(user.UserName)) return false;
-
-            return true;
         }
     }
 }
